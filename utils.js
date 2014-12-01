@@ -1060,6 +1060,7 @@ exports.path = function(path, delimiter) {
     delimiter = delimiter || '/';
     if (path[path.length - 1] === delimiter)
         return path;
+
     return path + delimiter;
 };
 
@@ -1975,7 +1976,28 @@ String.prototype.format = function() {
 };
 
 String.prototype.encode = function() {
-    return this.replace(/\&/g, '&amp;').replace(/\>/g, '&gt;').replace(/\</g, '&lt;').replace(/\"/g, '&quot;');
+    var output = '';
+    for (var i = 0, length = this.length; i < length; i++) {
+        var c = this[i];
+        switch (c) {
+            case '<':
+                output += '&lt;';
+                break;
+            case '>':
+                output += '&gt;';
+                break;
+            case '"':
+                output += '&quot;';
+                break;
+            case '&':
+                output += '&amp;';
+                break;
+            default:
+                output += c;
+                break;
+        }
+    }
+    return output;
 };
 
 String.prototype.decode = function() {
@@ -2462,7 +2484,7 @@ String.prototype.slug = function(max) {
 };
 
 String.prototype.link = function(max) {
-    console.log('String.prototype.link: OBSOLETE - Use String.prototype.Linker()');
+    console.log('String.prototype.link: OBSOLETE - Use String.prototype.linker()');
     return this.linker(max);
 };
 
@@ -2782,10 +2804,11 @@ Boolean.prototype.condition = function(ifTrue, ifFalse) {
     return (this ? ifTrue : ifFalse) || '';
 };
 
-/*
-    @count {Number}
-    return {Array}
-*/
+/**
+ * Take items from array
+ * @param {Number} count
+ * @return {Array}
+ */
 Array.prototype.take = function(count) {
     var arr = [];
     var self = this;
@@ -2798,10 +2821,32 @@ Array.prototype.take = function(count) {
     return arr;
 };
 
-/*
-    @name {String}
-    return {Array}
-*/
+/**
+ * First item in array
+ * @param {Object} def Default value.
+ * @return {Object}
+ */
+Array.prototype.first = function(def) {
+    var item = this[0];
+    return item === undefined ? def : item;
+};
+
+/**
+ * Last item in array
+ * @param {Object} def Default value.
+ * @return {Object}
+ */
+Array.prototype.last = function(def) {
+    var item = this[this.length - 1];
+    return item === undefined ? def : item;
+};
+
+/**
+ * Array object sorting
+ * @param {String} name Property name.
+ * @param {Booelan} asc
+ * @return {Array}
+ */
 Array.prototype.orderBy = function(name, asc) {
 
     if (typeof(name) === BOOLEAN) {
@@ -2911,10 +2956,11 @@ Array.prototype.trim = function() {
     return self;
 };
 
-/*
-    @count {Number}
-    return {Array}
-*/
+/**
+ * Skip items from array
+ * @param {Number} count
+ * @return {Array}
+ */
 Array.prototype.skip = function(count) {
     var arr = [];
     var self = this;
@@ -2926,48 +2972,101 @@ Array.prototype.skip = function(count) {
     return arr;
 };
 
-/*
-    @cb {Function} :: return true / false
-    return {Array}
-*/
-Array.prototype.where = function(cb) {
+/**
+ * Find items in Array
+ * @param {Function(item, index) or String/Object} cb
+ * @param {Object} value Optional.
+ * @return {Array}
+ */
+Array.prototype.where = function(cb, value) {
 
     var self = this;
     var selected = [];
-    var length = self.length;
+    var isFN = typeof(cb) === 'function';
+    var isV = value !== undefined;
 
-    for (var i = 0; i < length; i++) {
-        if (cb.call(self, self[i], i))
+    for (var i = 0, length = self.length; i < length; i++) {
+
+        if (isFN) {
+            if (cb.call(self, self[i], i))
+                selected.push(self[i]);
+            continue;
+        }
+
+        if (isV) {
+            if (self[i][cb] === value)
+                selected.push(self[i]);
+            continue;
+        }
+
+        if (self[i] === cb)
             selected.push(self[i]);
     }
 
     return selected;
 };
 
-/*
-    @cb {Function} :: return true if is finded
-    return {Array item}
-*/
-Array.prototype.find = function(cb) {
+/**
+ * Find item in Array
+ * @param {Function(item, index) or String/Object} cb
+ * @param {Object} value Optional.
+ * @return {Array}
+ */
+Array.prototype.find = function(cb, value) {
+
     var self = this;
-    var length = self.length;
-    for (var i = 0; i < length; i++) {
-        if (cb.call(self, self[i], i))
+    var isFN = typeof(cb) === 'function';
+    var isV = value !== undefined;
+
+    for (var i = 0, length = self.length; i < length; i++) {
+
+        if (isFN) {
+            if (cb.call(self, self[i], i))
+                return self[i];
+            continue;
+        }
+
+        if (isV) {
+            if (self[i][cb] === value)
+                return self[i];
+            continue;
+        }
+
+        if (self[i] === cb)
             return self[i];
     }
+
     return null;
 };
 
-/*
-    @cb {Function} :: return true if is removed
-    return {Array}
-*/
-Array.prototype.remove = function(cb) {
+/**
+ * Remove items from Array
+ * @param {Function(item, index) or Object} cb
+ * @param {Object} value Optional.
+ * @return {Array}
+ */
+Array.prototype.remove = function(cb, value) {
+
     var self = this;
     var arr = [];
-    var length = self.length;
-    for (var i = 0; i < length; i++) {
-        if (!cb.call(self, self[i], i))
+    var isFN = typeof(cb) === 'function';
+    var isV = value !== undefined;
+
+    for (var i = 0, length = self.length; i < length; i++) {
+
+        if (isFN) {
+            if (!cb.call(self, self[i], i))
+                arr.push(self[i]);
+            continue;
+        }
+
+        if (isV) {
+            if (self[i][cb] !== value)
+                arr.push(self[i]);
+            continue;
+        }
+
+        if (self[i] !== cb)
             arr.push(self[i]);
     }
     return arr;
